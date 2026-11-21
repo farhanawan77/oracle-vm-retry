@@ -1,5 +1,5 @@
 """Tries to launch the free A1 VM once per shape/AD. Exit 0 = launched or already exists."""
-import os, sys, oci
+import os, sys, time, oci
 
 cfg = {"user": os.environ["OCI_USER"], "tenancy": os.environ["OCI_TENANCY"],
        "fingerprint": os.environ["OCI_FINGERPRINT"], "key_file": "key.pem", "region": "us-ashburn-1"}
@@ -15,6 +15,7 @@ img = c.list_images(T, operating_system="Canonical Ubuntu", operating_system_ver
                     shape="VM.Standard.A1.Flex", sort_by="TIMECREATED", sort_order="DESC", limit=1).data[0].id
 for ocpu, mem in ((2, 12), (1, 6)):
     for ad in ("jGHu:US-ASHBURN-AD-1", "jGHu:US-ASHBURN-AD-2", "jGHu:US-ASHBURN-AD-3"):
+        time.sleep(8)
         try:
             r = c.launch_instance(oci.core.models.LaunchInstanceDetails(
                 compartment_id=T, availability_domain=ad, shape="VM.Standard.A1.Flex", display_name="stovima-backend",
