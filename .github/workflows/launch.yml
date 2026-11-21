@@ -1,0 +1,25 @@
+name: oracle-launch
+on:
+  schedule: [{ cron: "*/30 * * * *" }]
+  workflow_dispatch:
+permissions: { actions: write }
+jobs:
+  try:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -q -r requirements.txt
+      - run: printf '%s' "$KEY" > key.pem && python launch.py
+        env:
+          KEY: ${{ secrets.OCI_KEY }}
+          OCI_USER: ${{ secrets.OCI_USER }}
+          OCI_TENANCY: ${{ secrets.OCI_TENANCY }}
+          OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+          OCI_SUBNET: ${{ secrets.OCI_SUBNET }}
+      - name: Stop schedule once the VM exists
+        if: hashFiles('launched') != ''
+        run: gh workflow disable oracle-launch -R ${{ github.repository }}
+        env: { GH_TOKEN: "${{ github.token }}" }
