@@ -13,17 +13,20 @@ if live:
 
 img = c.list_images(T, operating_system="Canonical Ubuntu", operating_system_version="24.04",
                     shape="VM.Standard.A1.Flex", sort_by="TIMECREATED", sort_order="DESC", limit=1).data[0].id
-for ocpu, mem in ((2, 12), (1, 6)):
-    for ad in ("jGHu:US-ASHBURN-AD-1", "jGHu:US-ASHBURN-AD-2", "jGHu:US-ASHBURN-AD-3"):
-        time.sleep(8)
-        try:
-            r = c.launch_instance(oci.core.models.LaunchInstanceDetails(
-                compartment_id=T, availability_domain=ad, shape="VM.Standard.A1.Flex", display_name="stovima-backend",
-                shape_config=oci.core.models.LaunchInstanceShapeConfigDetails(ocpus=ocpu, memory_in_gbs=mem),
-                source_details=oci.core.models.InstanceSourceViaImageDetails(image_id=img, boot_volume_size_in_gbs=50),
-                create_vnic_details=oci.core.models.CreateVnicDetails(subnet_id=os.environ["OCI_SUBNET"], assign_public_ip=True),
-                metadata={"ssh_authorized_keys": open("stovima_oracle.pub").read().strip()}))
-            print("LAUNCHED", ad, ocpu, mem, r.data.id); open("launched", "w").write(r.data.id); sys.exit(0)
-        except oci.exceptions.ServiceError as e:
-            print(ad, ocpu, e.status, e.code, (e.message or "")[:80])
+deadline = time.time() + 9 * 60
+while time.time() < deadline:
+    for ocpu, mem in ((2, 12), (1, 6)):
+        for ad in ("jGHu:US-ASHBURN-AD-1", "jGHu:US-ASHBURN-AD-2", "jGHu:US-ASHBURN-AD-3"):
+            time.sleep(8)
+            try:
+                r = c.launch_instance(oci.core.models.LaunchInstanceDetails(
+                    compartment_id=T, availability_domain=ad, shape="VM.Standard.A1.Flex", display_name="stovima-backend",
+                    shape_config=oci.core.models.LaunchInstanceShapeConfigDetails(ocpus=ocpu, memory_in_gbs=mem),
+                    source_details=oci.core.models.InstanceSourceViaImageDetails(image_id=img, boot_volume_size_in_gbs=50),
+                    create_vnic_details=oci.core.models.CreateVnicDetails(subnet_id=os.environ["OCI_SUBNET"], assign_public_ip=True),
+                    metadata={"ssh_authorized_keys": open("stovima_oracle.pub").read().strip()}))
+                print("LAUNCHED", ad, ocpu, mem, r.data.id); open("launched", "w").write(r.data.id); sys.exit(0)
+            except oci.exceptions.ServiceError as e:
+                print(ad, ocpu, e.status, e.code, (e.message or "")[:80])
+    print("round done: no capacity"); time.sleep(60)
 print("no capacity")
