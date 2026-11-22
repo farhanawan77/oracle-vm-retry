@@ -2,25 +2,48 @@ name: oracle-launch
 on:
   schedule: [{ cron: "*/30 * * * *" }]
   workflow_dispatch:
+    inputs:
+      until:
+        description: "Unix time to keep retrying until (empty = 24h from now)"
+        required: false
 concurrency: { group: launch, cancel-in-progress: false }
 permissions: { actions: write, contents: read }
 jobs:
   try:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 355
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12", cache: pip }
       - run: pip install -q -r requirements.txt
-      - run: printf '%s' "$KEY" > key.pem && python launch.py
+      - name: Work out the end time
+        id: t
+        run: |
+          U="${{ github.event.inputs.until }}"
+          if [ -z "$U" ]; then
+            if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then U=$(( $(date +%s) + 86400 )); else U=0; fi
+          fi
+          echo "until=$U" >> "$GITHUB_OUTPUT"
+      - name: Retry launch
+        run: printf '%s' "$KEY" > key.pem && python launch.py
         env:
           KEY: ${{ secrets.OCI_KEY }}
           OCI_USER: ${{ secrets.OCI_USER }}
           OCI_TENANCY: ${{ secrets.OCI_TENANCY }}
           OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
           OCI_SUBNET: ${{ secrets.OCI_SUBNET }}
+          UNTIL: ${{ steps.t.outputs.until != '0' && steps.t.outputs.until || '' }}
+          # Long runs only for the 24h chain; scheduled runs stay ~9 min.
+          RUN_SECONDS: ${{ steps.t.outputs.until != '0' && '20400' || '540' }}
       - name: Stop schedule once the VM exists
         if: hashFiles('launched') != ''
         run: gh workflow disable oracle-launch -R ${{ github.repository }}
+        env: { GH_TOKEN: "${{ github.token }}" }
+      - name: Continue the 24h chain
+        if: hashFiles('launched') == '' && steps.t.outputs.until != '0'
+        run: |
+          if [ "$(date +%s)" -lt "${{ steps.t.outputs.until }}" ]; then
+            gh workflow run oracle-launch -R ${{ github.repository }} -f until=${{ steps.t.outputs.until }}
+          fi
         env: { GH_TOKEN: "${{ github.token }}" }
