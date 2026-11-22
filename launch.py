@@ -13,7 +13,7 @@ if live:
 
 img = c.list_images(T, operating_system="Canonical Ubuntu", operating_system_version="24.04",
                     shape="VM.Standard.A1.Flex", sort_by="TIMECREATED", sort_order="DESC", limit=1).data[0].id
-deadline = min(time.time() + int(os.environ.get("RUN_SECONDS", "540")), float(os.environ.get("UNTIL", "1e12")))
+deadline = min(time.time() + int(os.environ.get("RUN_SECONDS") or "540"), float(os.environ.get("UNTIL") or "1e12"))
 while time.time() < deadline:
     for ocpu, mem in ((2, 12), (1, 6)):
         for ad in ("jGHu:US-ASHBURN-AD-1", "jGHu:US-ASHBURN-AD-2", "jGHu:US-ASHBURN-AD-3"):
