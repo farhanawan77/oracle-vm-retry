@@ -21,9 +21,11 @@ def has(name):
 micro_done = has("stovima-micro")
 micro_img = c.list_images(T, operating_system="Canonical Ubuntu", operating_system_version="24.04",
                           shape=MICRO, sort_by="TIMECREATED", sort_order="DESC", limit=1).data[0].id
+# The free micro is allowed in one AD only; others answer LimitExceeded.
+micro_ads = ["jGHu:US-ASHBURN-AD-1", "jGHu:US-ASHBURN-AD-2", "jGHu:US-ASHBURN-AD-3"]
 def try_micro():
     global micro_done
-    for ad in ("jGHu:US-ASHBURN-AD-1", "jGHu:US-ASHBURN-AD-2", "jGHu:US-ASHBURN-AD-3"):
+    for ad in list(micro_ads):
         time.sleep(10)
         try:
             r = c.launch_instance(oci.core.models.LaunchInstanceDetails(
@@ -34,7 +36,9 @@ def try_micro():
             print("MICRO LAUNCHED", ad, r.data.id); micro_done = True; return
         except oci.exceptions.ServiceError as e:
             print("micro", ad, e.status, e.code, (e.message or "")[:80])
-            if e.code == "LimitExceeded": micro_done = True; return
+            if e.code == "LimitExceeded":
+                micro_ads.remove(ad)
+                if not micro_ads: micro_done = True; return
             if e.status == 429: time.sleep(60)
 
 deadline = min(time.time() + int(os.environ.get("RUN_SECONDS") or "540"), float(os.environ.get("UNTIL") or "1e12"))
