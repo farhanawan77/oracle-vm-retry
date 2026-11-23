@@ -35,6 +35,7 @@ def try_micro():
         except oci.exceptions.ServiceError as e:
             print("micro", ad, e.status, e.code, (e.message or "")[:80])
             if e.code == "LimitExceeded": micro_done = True; return
+            if e.status == 429: time.sleep(60)
 
 deadline = min(time.time() + int(os.environ.get("RUN_SECONDS") or "540"), float(os.environ.get("UNTIL") or "1e12"))
 while time.time() < deadline:
@@ -52,5 +53,6 @@ while time.time() < deadline:
                 print("LAUNCHED", ad, ocpu, mem, r.data.id); open("launched", "w").write(r.data.id); sys.exit(0)
             except oci.exceptions.ServiceError as e:
                 print(ad, ocpu, e.status, e.code, (e.message or "")[:80])
+                if e.status == 429: time.sleep(60)
     print("round done: no capacity"); time.sleep(30)
 print("no capacity")
