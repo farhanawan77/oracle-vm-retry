@@ -22,7 +22,7 @@ jobs:
         run: |
           U="${{ github.event.inputs.until }}"
           if [ -z "$U" ]; then
-            if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then U=$(( $(date +%s) + 86400 )); else U=0; fi
+            if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then U=$(( $(date +%s) + 2592000 )); else U=0; fi
           fi
           echo "until=$U" >> "$GITHUB_OUTPUT"
       - name: Retry launch

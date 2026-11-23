@@ -24,7 +24,7 @@ micro_img = c.list_images(T, operating_system="Canonical Ubuntu", operating_syst
 def try_micro():
     global micro_done
     for ad in ("jGHu:US-ASHBURN-AD-1", "jGHu:US-ASHBURN-AD-2", "jGHu:US-ASHBURN-AD-3"):
-        time.sleep(20)
+        time.sleep(10)
         try:
             r = c.launch_instance(oci.core.models.LaunchInstanceDetails(
                 compartment_id=T, availability_domain=ad, shape=MICRO, display_name="stovima-micro",
@@ -42,7 +42,7 @@ while time.time() < deadline:
     if not micro_done: try_micro()
     for ocpu, mem in ((2, 12), (1, 6)):
         for ad in ("jGHu:US-ASHBURN-AD-1", "jGHu:US-ASHBURN-AD-2", "jGHu:US-ASHBURN-AD-3"):
-            time.sleep(20)
+            time.sleep(10)
             try:
                 r = c.launch_instance(oci.core.models.LaunchInstanceDetails(
                     compartment_id=T, availability_domain=ad, shape="VM.Standard.A1.Flex", display_name="stovima-backend",
@@ -54,5 +54,5 @@ while time.time() < deadline:
             except oci.exceptions.ServiceError as e:
                 print(ad, ocpu, e.status, e.code, (e.message or "")[:80])
                 if e.status == 429: time.sleep(60)
-    print("round done: no capacity"); time.sleep(30)
+    print("round done: no capacity"); time.sleep(5)
 print("no capacity")
