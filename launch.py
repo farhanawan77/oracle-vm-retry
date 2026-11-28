@@ -18,10 +18,7 @@ MICRO = "VM.Standard.E2.1.Micro"
 def has(name):
     return any(i.lifecycle_state not in ("TERMINATED", "TERMINATING")
                for i in c.list_instances(T, display_name=name).data)
-# Always Free allows two AMD micros; keep trying until both exist.
-MICRO_NAMES = ["stovima-micro", "stovima-micro-2"]
-micro_todo = [n for n in MICRO_NAMES if not has(n)]
-micro_done = not micro_todo
+micro_done = has("stovima-micro")
 micro_img = c.list_images(T, operating_system="Canonical Ubuntu", operating_system_version="24.04",
                           shape=MICRO, sort_by="TIMECREATED", sort_order="DESC", limit=1).data[0].id
 # The free micro is allowed in one AD only; others answer LimitExceeded.
@@ -32,12 +29,11 @@ def try_micro():
         time.sleep(10)
         try:
             r = c.launch_instance(oci.core.models.LaunchInstanceDetails(
-                compartment_id=T, availability_domain=ad, shape=MICRO, display_name=micro_todo[0],
+                compartment_id=T, availability_domain=ad, shape=MICRO, display_name="stovima-micro",
                 source_details=oci.core.models.InstanceSourceViaImageDetails(image_id=micro_img, boot_volume_size_in_gbs=50),
                 create_vnic_details=oci.core.models.CreateVnicDetails(subnet_id=os.environ["OCI_SUBNET"], assign_public_ip=True),
                 metadata={"ssh_authorized_keys": open("stovima_oracle.pub").read().strip()}))
-            print("MICRO LAUNCHED", micro_todo[0], ad, r.data.id)
-            micro_todo.pop(0); micro_done = not micro_todo; return
+            print("MICRO LAUNCHED", ad, r.data.id); micro_done = True; return
         except oci.exceptions.ServiceError as e:
             print("micro", ad, e.status, e.code, (e.message or "")[:80])
             if e.code == "LimitExceeded":
